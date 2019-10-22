@@ -1,2 +1,161 @@
 teste
-teste
+#carregando os Pacotes
+install.packages("leaflet")
+library(leaflet)
+
+#Pega o local da UNB
+#Seleciona as cordenadas
+m <- leaflet() %>% setView(lng = -47.869035, lat = -15.758656, zoom = 16)
+#Seleciona as cordenadas
+m %>% addTiles()
+d<- m
+
+#Como alternativa, muitos mapas base populares gratuitos de terceiros podem ser adicionados usando a addProviderTiles()função, que é implementada usando o plugin de fornecedores de folhetos .
+#Não precise se lembrar ou procurar fornecedores de blocos suportados; basta digitar providers$e escolher uma das opções. Você também pode usar names(providers)para visualizar todas as opções.
+
+#Exemplos:
+
+m %>% addProviderTiles(providers$Stamen.Toner)
+m <- d
+m %>% addProviderTiles(providers$CartoDB.Positron)
+
+#Alguns provedores de conjuntos de blocos exigem que você se registre
+#Você pode passar tokens / chaves de acesso e outras opções para o provedor de tile.
+
+## Modelo de URL de bloco personalizado
+
+#Você pode usar addWMSTiles()para adicionar blocos WMS (Web Map Service). O mapa abaixo mostra a refletividade da base (uma medida da intensidade da precipitação que ocorre) usando o WMS da Mesonet Ambiental de Iowa :
+
+leaflet() %>% addTiles() %>% setView(-93.65, 42.0285, zoom = 4) %>%
+  addWMSTiles(
+    "http://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r.cgi",
+    layers = "nexrad-n0r-900913",
+    options = WMSTileOptions(format = "image/png", transparent = TRUE),
+    attribution = "Weather data © 2012 IEM Nexrad"
+  )
+
+
+#Combinando camadas de ladrilhos
+#você pode empilhá-los adicionando várias camadas de mosaico
+#Geralmente, isso só faz sentido se os ladrilhos da frente consistirem em ladrilhos semi-transparentes ou tiverem uma opacidade ajustada por meio do optionsargumento
+
+m %>% addProviderTiles(providers$MtbMap) %>%
+addProviderTiles(providers$Stamen.TonerLines,
+                 options = providerTileOptions(opacity = 0.35)) %>%
+  addProviderTiles(providers$Stamen.TonerLabels)
+
+
+#POPUP
+
+m <- leaflet() %>% setView(lng = -47.869685, lat = -15.763306, zoom = 16)
+m %>% addTiles()
+
+content <- paste(sep = "<br/>",
+                 "<b><a href='http://www.unb.br/'>Unb Site</a></b>",
+                 "ICC",
+                 "Unb"
+)
+
+leaflet() %>% addTiles() %>%
+  addPopups(lng = -47.869685, lat = -15.763306, content,
+            options = popupOptions(closeButton = FALSE)
+  )
+
+#Um uso comum para pop-ups é fazê-los aparecer quando clicam em marcadores ou formas. 
+
+
+library(htmltools)
+
+df <- read.csv(textConnection(
+  "Name,Lat,Long
+  Departamento de Estatística ,-15.758656,-47.869035
+  ICC,-15.763306,-47.869685
+  Restaurante Universitario,-15.764253,-47.870273"
+))
+
+leaflet(df) %>% addTiles() %>%
+  addMarkers(~Long, ~Lat, popup = ~htmlEscape(Name))
+
+#Etiquetas
+#Um rótulo é um conteúdo textual ou HTML que pode ser anexado a marcadores e formas a serem sempre exibidos ou exibidos ao passar o mouse. Ao contrário dos pop-ups, você não precisa clicar em um marcador / polígono para que o rótulo seja mostrado.
+
+df <- read.csv(textConnection(
+  "Name,Lat,Long
+  Departamento de Estatística ,-15.758656,-47.869035
+  ICC,-15.763306,-47.869685
+  Restaurante Universitario,-15.764253,-47.870273"
+))
+
+leaflet(df) %>% addTiles() %>%
+  addMarkers(~Long, ~Lat, label = ~htmlEscape(Name))
+
+#Personalizando etiquetas de marcador
+#Você pode personalizar os rótulos dos marcadores usando o labelOptions
+
+# Mudando o tamanho e o texto apenas utilizando um CSS customizado
+leaflet() %>% addTiles() %>% setView(-47.871149,-15.761568,  16) %>%
+  addMarkers(
+    lng = -47.869685, lat = -15.763306,
+    label = "Default ",
+    labelOptions = labelOptions(noHide = T)) %>%
+  addMarkers(
+    lng = -47.870273, lat =-15.764253 ,
+    label = "Popup s/ fundo",
+    labelOptions = labelOptions(noHide = T, textOnly = TRUE)) %>%
+  addMarkers(
+    lng = -47.869035, lat = -15.758656,
+    label = "Popup com Fonte 15px",
+    labelOptions = labelOptions(noHide = T, textsize = "15px")) %>%
+  addMarkers(
+    lng = -47.871453, lat = -15.760986,
+    label = "Popup com estilo CSS",
+    labelOptions = labelOptions(noHide = T, direction = "bottom",
+                                style = list(
+                                  "color" = "red",
+                                  "font-family" = "serif",
+                                  "font-style" = "italic",
+                                  "box-shadow" = "3px 3px rgba(0,0,0,0.25)",
+                                  "font-size" = "12px",
+                                  "border-color" = "rgba(0,0,0,0.5)"
+                                )))
+
+#Círculos
+
+cities <- read.csv(textConnection("City,Lat,Long,Pop
+Departamento de Estatística ,-15.758656,-47.869035,3
+ICC,-15.763306,-47.869685,30
+Restaurante Universitario,-15.764253,-47.870273,15
+                                  "))
+
+leaflet(cities) %>% addTiles() %>%
+  addCircles(lng = ~Long, lat = ~Lat, weight = 1,
+             radius = ~sqrt(Pop) * 30, popup = ~City
+  )
+
+#Retangulos
+#Retângulos são adicionados usando a addRectangles()função É preciso lng1, lng2, lat1, e lat2
+
+leaflet() %>% addTiles() %>%
+  addRectangles(
+    lat1=-15.765073, lng1=-47.866681,
+    lat2=-15.760592, lng2= -47.871563,
+    fillColor = "transparent"
+  )
+
+
+#Imagens Como camada extra (incompleto)
+
+library(raster)
+
+r <- raster("nc/oisst-sst.nc")
+pal <- colorNumeric(c("#0C2C84", "#41B6C4", "#FFFFCC"), values(r),
+                    na.color = "transparent")
+
+leaflet() %>% addTiles() %>%
+  addRasterImage(r, colors = pal, opacity = 0.8) %>%
+  addLegend(pal = pal, values = values(r),
+            title = "Surface temp")
+
+
+
+
