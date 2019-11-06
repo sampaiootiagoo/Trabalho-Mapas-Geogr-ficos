@@ -1,4 +1,3 @@
-teste
 #carregando os Pacotes
 install.packages("leaflet")
 library(leaflet)
@@ -143,19 +142,173 @@ leaflet() %>% addTiles() %>%
   )
 
 
-#Imagens Como camada extra (incompleto)
-
-library(raster)
-
-r <- raster("nc/oisst-sst.nc")
-pal <- colorNumeric(c("#0C2C84", "#41B6C4", "#FFFFCC"), values(r),
-                    na.color = "transparent")
-
-leaflet() %>% addTiles() %>%
-  addRasterImage(r, colors = pal, opacity = 0.8) %>%
-  addLegend(pal = pal, values = values(r),
-            title = "Surface temp")
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+Usando o Google way
+
+# trançando rotas
+
+library(googleway)
+
+ #Entrar com sua API do google Clound
+
+api_key <- "AIzaSyAWuKwOIkJW9DFsvwWYkiJGhBOu8H63u_g"
+map_key <- "AIzaSyAWuKwOIkJW9DFsvwWYkiJGhBOu8H63u_g"
+
+## Definindo um dataframe com as localizações
+
+## Pode usar Lat/Long tambem
+
+df_locations <- data.frame(
+  origin = c("rodoviaria estacao central, brasilia")
+  , destination = c( "icc unb brasilia")
+  , stringsAsFactors = F
+)
+
+## passa por cada local e extrai a linha do resultado
+
+lst_directions <- apply(df_locations, 1, function(x){
+  res <- google_directions(
+    key = api_key
+    , origin = x[['origin']]
+    , destination = x[['destination']]
+  )
+  
+  df_result <- data.frame(
+    origin = x[['origin']]
+    , destination = x[['destination']]
+    , route = res$routes$overview_polyline$points
+  )
+  return(df_result)
+})
+
+#Convertendo os resultados em dataframe
+df_directions <- do.call(rbind, lst_directions)
+
+## Gerando o mapa
+google_map(key = map_key ) %>%
+  add_polylines(data = df_directions, polyline = "route")
+
+
+#google_geocode : geocodificação do Google
+
+#A geocodificação é o processo de conversão de endereços (como "1600 Amphitheatre Parkway, Mountain View, CA") em coordenadas geográficas (como latitude 37.423021 e longitude -122.083739), que você pode usar para colocar marcadores em um mapa ou posicionar o mapa.
+
+##https://stackoverflow.com/questions/14026759/how-to-get-all-places-or-specific-type-of-place-such-as-a-restaurant-in-a-city
+
+
+
+
+
+## View the names of the returned restaurantes, and whether they are open or not
+
+library(googleway)
+library(leaflet)
+library(htmltools)
+library(tidyverse)
+key <- "AIzaSyAWuKwOIkJW9DFsvwWYkiJGhBOu8H63u_g"
+set_key("AIzaSyAWuKwOIkJW9DFsvwWYkiJGhBOu8H63u_g")
+
+endereço <- function(x,y){
+  df <- google_geocode(address = x,
+                       simplify = TRUE)
+  unlist((unname(df$results$geometry$location[y])))[1]
+}
+
+
+## View the names of the returned restaurantes, and whether they are open or not
+
+coordenadas <- function(variavel) {
+  res <- google_places(search_string = variavel,
+                     key = key)
+  resultados<-as.data.frame(cbind(res$results$name, res$results$opening_hours))
+  names(resultados)<- c("nome","aberto")
+  
+  resultados<-resultados %>% mutate(nome=paste0(nome,", brasilia"))
+  
+  resultados$Long <- as.numeric(lapply(resultados$nome,endereço,y=2))
+  resultados$Lat <- as.numeric(lapply(resultados$nome,endereço,y=1))
+  
+  
+  
+  map <-leaflet(resultados) %>% addTiles() %>%
+    addMarkers(~Long, ~Lat, popup = ~htmlEscape(nome))
+  return(map)
+}
+coordenadas("academias de brasilia")
+
+}
+
+####COLOCANDO AUDIO
+
+library(shiny)
+library(leaflet)
+library(tidyverse)
+
+df <- read.csv(textConnection(
+    "Name,Lat,Long
+  Departamento de Estatística ,-15.758656,-47.869035"))
+
+setwd("C://Users//Gabriel//Music")
+addResourcePath("www", "C:/Users/Gabriel/Music/www")
+resposta<-tags$audio(src="www/teste.mp3",type = "audio/mp3",autoplay = NA,controls = NA)
+
+#Você deve peder ao r "resposta", modificar as aspas duplas para simples e adicionar no campo de popup
+ui <- fluidPage(
+    leaflet(df) %>% addTiles() %>%
+        addMarkers(~Long, ~Lat, popup = "<audio src='www/teste.mp3' type='audio/mp3' autoplay controls></audio>")
+      )
+
+server <- function(input, output, session) {
+}
+
+shinyApp(ui, server)
+
+set_key<-"AIzaSyAWuKwOIkJW9DFsvwWYkiJGhBOu8H63u_g"
+
+
+
+
+
+library(shiny)
+library(googleway)
+
+
+
+
+
+
+url <- 'https://raw.githubusercontent.com/plotly/datasets/master/2011_february_aa_flight_paths.csv'
+flights <- read.csv(url)
+flights$id <- seq_len(nrow(flights))
+
+
+## encode the routes as polylines
+lst <- lapply(unique(flights$id), function(x){
+  lat = c(flights[flights["id"] == x, c("start_lat")], flights[flights["id"] == x, c("end_lat")])
+  lon = c(flights[flights["id"] == x, c("start_lon")], flights[flights["id"] == x, c("end_lon")])
+  data.frame(id = x, polyline = encode_pl(lat = lat, lon = lon))
+})
+
+flights <- merge(flights, do.call(rbind, lst), by = "id")
+
+style <- map_styles()$night
+
+google_map(key = set_key, style = style) %>%
+  add_polylines(data = flights, polyline = "polyline", mouse_over_group = "airport1",
+                stroke_weight = 1, stroke_opacity = 0.3, stroke_colour = "#ccffff")
 
 
